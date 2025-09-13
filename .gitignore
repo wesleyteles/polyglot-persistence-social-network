@@ -1,0 +1,20 @@
+# Ambientes Virtuais
+.venv/
+venv/
+env/
+
+# Arquivos de Ambiente
+.env
+
+# Cache do Python
+__pycache__/
+*.pyc
+
+# Banco de dados local (se usado)
+*.sqlite3
+
+# Arquivos do VSCode
+.vscode/
+
+# Arquivos de Build do Docker
+docker-build/

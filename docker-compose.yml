@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # Serviço 1: Backend com Django
+  django-app:
+    build:
+      context: ./backend-django
+    container_name: django-app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend-django:/app
+    env_file:
+      - ./.env
+    depends_on:
+      - postgres-db
+    command: >
+      sh -c "python manage.py wait_for_db &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  # Serviço 2: Banco de Dados Relacional
+  postgres-db:
+    image: postgres:15
+    container_name: postgres-db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+
+  # Serviço 3: Banco de Dados de Grafo
+  neo4j-db:
+    image: neo4j:5
+    container_name: neo4j-db
+    ports:
+      - "7474:7474" # Interface Web do Neo4j
+      - "7687:7687" # Porta Bolt para conexão dos drivers
+    volumes:
+      - neo4j_data:/data
+    environment:
+      - NEO4J_AUTH=${NEO4J_AUTH}
+
+  # Serviço 4 e 5: Kafka e Zookeeper para Streaming
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.2.1
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka-broker:
+    image: confluentinc/cp-kafka:7.2.1
+    container_name: kafka-broker
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka-broker:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+# Volumes para persistir os dados dos bancos
+volumes:
+  postgres_data:
+  neo4j_data:
