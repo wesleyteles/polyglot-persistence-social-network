@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Serviço 1: Backend com Django
   django-app:
@@ -18,6 +16,18 @@ services:
       sh -c "python manage.py wait_for_db &&
              python manage.py migrate &&
              python manage.py runserver 0.0.0.0:8000"
+
+  # Serviço 6: Microsserviço de Conexões (FastAPI)
+  connections-app:
+    build:
+      context: ./services/connections
+    container_name: connections-app
+    ports:
+      - "8001:8000" # Mapeando para a porta 8001 no host para não conflitar com o Django
+    env_file:
+      - ./.env
+    depends_on:
+      - neo4j-db           
 
   # Serviço 2: Banco de Dados Relacional
   postgres-db:
@@ -67,6 +77,31 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+# Serviço 7: Microsserviço de Notificações (Consumidor Kafka)
+  notifications-app:
+    build:
+      context: ./services/notifications
+    container_name: notifications-app
+    env_file:
+      - ./.env
+    depends_on:
+      - kafka-broker
+
+# Serviço 8: Frontend (Servidor Web Nginx)
+  frontend-app:
+    image: nginx:alpine
+    container_name: frontend-app
+    ports:
+      - "8080:80" # Acessaremos a UI em http://localhost:8080
+    volumes:
+      # Monta nossa pasta frontend no diretório público do Nginx
+      - ./frontend:/usr/share/nginx/html
+    depends_on:
+      - django-app
+      - connections-app
+
+
 
 # Volumes para persistir os dados dos bancos
 volumes:

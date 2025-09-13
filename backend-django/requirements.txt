@@ -1,2 +1,5 @@
 Django>=4.2
 psycopg2-binary
+djangorestframework # Para criar a API
+djangorestframework-simplejwt # Para autenticação com JWT
+django-cors-headers # Para lidar com CORS
